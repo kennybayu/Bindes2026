@@ -179,6 +179,28 @@ async def main() -> None:
 
     if tenants_docs:
         await db.tenants.insert_many(tenants_docs)
+    # Tunggakan: beberapa tagihan lampau yang belum dibayar (jatuh tempo sudah lewat),
+    # agar halaman Rekap Tunggakan punya data nyata dengan lama keterlambatan berbeda.
+    bulanan = [t for t in tenants_docs if t["kategori"] == "bulanan" and t["status"] == "aktif"]
+    for n, t in enumerate(bulanan[:3]):
+        back = n + 1  # 1, 2, 3 bulan lalu -> makin lama makin telat
+        awal_bulan = month_start(now_local, back)
+        tempo = awal_bulan + timedelta(days=9)  # jatuh tempo tanggal 10
+        payments_docs.append({
+            "id": str(uuid.uuid4()),
+            "tenant_id": t["id"],
+            "nomor_id": t["nomor_id"],
+            "nama_lengkap": t["nama_lengkap"],
+            "periode": f"{BULAN[awal_bulan.month - 1]} {awal_bulan.year} (tunggakan)",
+            "jumlah": t["tarif"],
+            "metode": "tunai",
+            "status": "menunggu",
+            "jatuh_tempo": iso(tempo),
+            "catatan": "Belum dibayar sampai jatuh tempo",
+            "confirmed_at": None,
+            "created_at": awal_bulan.astimezone(timezone.utc),
+        })
+
     if payments_docs:
         await db.payments.insert_many(payments_docs)
     await db.counters.find_one_and_update(

@@ -86,6 +86,29 @@ export interface PaymentCreate {
   catatan?: string;
 }
 
+// Mirror OverduePayment / OverdueSummary / BulkBillResult di backend/models/payment.py
+export interface OverduePayment extends Payment {
+  hari_telat: number;
+  kategori: string;
+  blok: string;
+  no_hp: string;
+}
+
+export interface OverdueSummary {
+  periode_hari_ini: string;
+  jumlah_penyewa: number;
+  total_tunggakan: number;
+  telat_terlama: number;
+  items: OverduePayment[];
+}
+
+export interface BulkBillResult {
+  periode: string;
+  dibuat: number;
+  dilewati: number;
+  total_nilai: number;
+}
+
 export interface RevenuePoint {
   label: string;
   total: number;

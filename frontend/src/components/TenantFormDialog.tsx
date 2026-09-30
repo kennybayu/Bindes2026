@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { ApiError, apiPost, apiPut } from "@/lib/api";
-import { KATEGORI_LABEL, STATUS_PENYEWA_LABEL } from "@/lib/format";
+import { KATEGORI_LABEL, STATUS_PENYEWA_LABEL, TARIF_DEFAULT, formatRupiah } from "@/lib/format";
 import type { KategoriSewa, StatusPenyewa, Tenant, TenantCreate } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import {
@@ -173,7 +173,16 @@ export default function TenantFormDialog({ open, onOpenChange, tenant }: Props) 
               <Label>Kategori Sewa</Label>
               <Select
                 value={form.kategori}
-                onValueChange={(v) => setForm({ ...form, kategori: v as KategoriSewa })}
+                onValueChange={(v) => {
+                  const kategori = v as KategoriSewa;
+                  setForm({ ...form, kategori });
+                  // Tarif otomatis: isi acuan kategori bila kolom masih kosong atau
+                  // masih memakai acuan kategori sebelumnya (input manual dipertahankan).
+                  const acuanLama = String(TARIF_DEFAULT[form.kategori] ?? "");
+                  if (!tarif || tarif === acuanLama) {
+                    setTarif(String(TARIF_DEFAULT[kategori] ?? ""));
+                  }
+                }}
               >
                 <SelectTrigger className="w-full" data-testid="select-kategori">
                   <SelectValue>{(v) => KATEGORI_LABEL[v as string]}</SelectValue>
@@ -196,6 +205,10 @@ export default function TenantFormDialog({ open, onOpenChange, tenant }: Props) 
                 onChange={(e) => setTarif(e.target.value)}
                 placeholder="mis. 450000"
               />
+              <p className="text-xs text-muted-foreground" data-testid="hint-tarif-acuan">
+                Acuan {KATEGORI_LABEL[form.kategori].toLowerCase()}:{" "}
+                {formatRupiah(TARIF_DEFAULT[form.kategori] ?? 0)}
+              </p>
             </div>
             <div className="grid gap-2">
               <Label>Status</Label>

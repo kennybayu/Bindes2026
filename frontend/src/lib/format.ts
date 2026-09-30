@@ -66,6 +66,13 @@ export function terbilangIDR(n: number): string {
   return `${words.charAt(0).toUpperCase()}${words.slice(1)} rupiah`;
 }
 
+/** Tarif acuan per kategori sewa — dipakai untuk mengisi tarif otomatis di form penyewa. */
+export const TARIF_DEFAULT: Record<string, number> = {
+  harian: 25_000,
+  bulanan: 450_000,
+  tahunan: 5_000_000,
+};
+
 export const KATEGORI_LABEL: Record<string, string> = {
   harian: "Harian",
   bulanan: "Bulanan",

@@ -1,10 +1,10 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Check, FileSpreadsheet, MessageCircle, Plus, ReceiptText, Trash2, X } from "lucide-react";
-import { apiDelete, apiGet, apiPatch } from "@/lib/api";
+import { Check, FileSpreadsheet, Layers, MessageCircle, Plus, ReceiptText, Trash2, X } from "lucide-react";
+import { apiDelete, apiGet, apiPatch, apiPost } from "@/lib/api";
 import { METODE_LABEL, formatDateTimeID, formatRupiah, initials } from "@/lib/format";
-import type { Payment, Tenant } from "@/lib/types";
+import type { BulkBillResult, Payment, Tenant } from "@/lib/types";
 import { waReminderLink } from "@/lib/whatsapp";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -20,6 +20,14 @@ import { StatusBadge } from "@/components/Badges";
 import PaymentRecordDialog from "@/components/PaymentRecordDialog";
 import ReceiptDialog from "@/components/ReceiptDialog";
 import ExportDialog from "@/components/ExportDialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 
 const TABS = [
@@ -36,11 +44,38 @@ export default function Pembayaran() {
   const [recordOpen, setRecordOpen] = useState(false);
   const [receipt, setReceipt] = useState<Payment | null>(null);
   const [exportOpen, setExportOpen] = useState(false);
+  const [bulkOpen, setBulkOpen] = useState(false);
 
   // Daftar penyewa untuk mengambil no. HP saat mengirim pengingat WhatsApp.
   const { data: tenants } = useQuery({
     queryKey: ["tenants"],
     queryFn: () => apiGet<Tenant[]>("/tenants"),
+  });
+
+  // Tagihan massal: hanya penyewa bulanan yang masih aktif.
+  const bulkPenyewa = useMemo(
+    () => (tenants ?? []).filter((t) => t.kategori === "bulanan" && t.status === "aktif"),
+    [tenants]
+  );
+
+  const bulk = useMutation({
+    mutationFn: () => apiPost<BulkBillResult>("/payments/bulk-monthly"),
+    onSuccess: (r) => {
+      void qc.invalidateQueries({ queryKey: ["payments"] });
+      void qc.invalidateQueries({ queryKey: ["dashboard"] });
+      void qc.invalidateQueries({ queryKey: ["activities"] });
+      setBulkOpen(false);
+      if (r.dibuat === 0) {
+        toast.info(`Semua penyewa bulanan sudah punya tagihan ${r.periode}`);
+      } else {
+        toast.success(
+          `${r.dibuat} tagihan ${r.periode} diterbitkan (${formatRupiah(r.total_nilai)})${
+            r.dilewati ? ` • ${r.dilewati} dilewati` : ""
+          }`
+        );
+      }
+    },
+    onError: () => toast.error("Gagal menerbitkan tagihan massal"),
   });
 
   const kirimPengingat = (p: Payment) => {
@@ -121,7 +156,11 @@ export default function Pembayaran() {
             Verifikasi dan konfirmasi pembayaran sewa lapak dari penyewa
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" onClick={() => setBulkOpen(true)} data-testid="btn-tagihan-massal">
+            <Layers data-icon="inline-start" className="size-4" />
+            Tagihan Massal
+          </Button>
           <Button variant="outline" onClick={() => setExportOpen(true)} data-testid="btn-ekspor-excel">
             <FileSpreadsheet data-icon="inline-start" className="size-4" />
             Ekspor Excel
@@ -311,6 +350,45 @@ export default function Pembayaran() {
         onOpenChange={(v) => !v && setReceipt(null)}
       />
       <ExportDialog open={exportOpen} onOpenChange={setExportOpen} />
+
+      <Dialog open={bulkOpen} onOpenChange={setBulkOpen}>
+        <DialogContent className="sm:max-w-md" data-testid="dialog-tagihan-massal">
+          <DialogHeader>
+            <DialogTitle>Terbitkan Tagihan Massal</DialogTitle>
+            <DialogDescription>
+              Membuat tagihan bulan berjalan untuk semua penyewa berkategori <b>Bulanan</b> yang
+              masih aktif, dengan jatuh tempo tanggal 10. Penyewa yang sudah punya tagihan bulan ini
+              otomatis dilewati.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="rounded-xl border border-border p-4 text-sm" data-testid="ringkasan-massal">
+            <div className="flex justify-between gap-4">
+              <span className="text-muted-foreground">Penyewa bulanan aktif</span>
+              <span className="font-semibold" data-testid="massal-jumlah-penyewa">
+                {bulkPenyewa.length} penyewa
+              </span>
+            </div>
+            <div className="mt-2 flex justify-between gap-4">
+              <span className="text-muted-foreground">Estimasi total tagihan</span>
+              <span className="font-semibold" data-testid="massal-estimasi">
+                {formatRupiah(bulkPenyewa.reduce((s, t) => s + t.tarif, 0))}
+              </span>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBulkOpen(false)} data-testid="btn-batal-massal">
+              Batal
+            </Button>
+            <Button
+              onClick={() => bulk.mutate()}
+              disabled={bulk.isPending}
+              data-testid="btn-konfirmasi-massal"
+            >
+              {bulk.isPending ? "Menerbitkan..." : "Terbitkan Tagihan"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

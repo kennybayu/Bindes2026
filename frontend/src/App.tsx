@@ -8,6 +8,7 @@ import Pembayaran from "@/pages/Pembayaran";
 import Pengaturan from "@/pages/Pengaturan";
 import Riwayat from "@/pages/Riwayat";
 import ScanQr from "@/pages/ScanQr";
+import Tunggakan from "@/pages/Tunggakan";
 import { Toaster } from "@/components/ui/sonner";
 
 // /login berdiri sendiri di luar shell; semua route lain dilindungi sesi pengelola.
@@ -31,6 +32,7 @@ function Protected() {
           <Route path="/" element={<Dashboard />} />
           <Route path="/lapak" element={<Lapak />} />
           <Route path="/pembayaran" element={<Pembayaran />} />
+          <Route path="/tunggakan" element={<Tunggakan />} />
           <Route path="/scan-qr" element={<ScanQr />} />
           <Route path="/riwayat" element={<Riwayat />} />
           <Route path="/pengaturan" element={<Pengaturan />} />

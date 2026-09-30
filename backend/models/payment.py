@@ -32,3 +32,27 @@ class PaymentCreate(BaseModel):
     metode: MetodeBayar = "tunai"
     jatuh_tempo: str = ""
     catatan: str = ""
+
+
+class OverduePayment(Payment):
+    """Tagihan menunggu yang sudah melewati jatuh tempo (dihitung server, zona WITA)."""
+
+    hari_telat: int
+    kategori: str = ""
+    blok: str = ""
+    no_hp: str = ""
+
+
+class OverdueSummary(BaseModel):
+    periode_hari_ini: str          # YYYY-MM-DD (WITA)
+    jumlah_penyewa: int
+    total_tunggakan: int
+    telat_terlama: int             # hari
+    items: list[OverduePayment]
+
+
+class BulkBillResult(BaseModel):
+    periode: str
+    dibuat: int
+    dilewati: int                  # sudah punya tagihan periode ini
+    total_nilai: int

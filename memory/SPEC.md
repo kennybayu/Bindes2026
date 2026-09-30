@@ -29,6 +29,9 @@ topbar putih dengan jam WITA, konten slate-50, aksen emas amber.
 - `GET /tenants` (query: q, kategori, status) · `POST /tenants` (201, auto nomor_id) · `GET/PUT/DELETE /tenants/{id}` (delete = kaskade hapus payments penyewa) · `GET /tenants/by-nomor/{nomor_id}` (dipakai scanner QR)
 - `GET /payments` (query: status, tenant_id) · `POST /payments` (status awal menunggu) · `PATCH /payments/{id}/confirm` · `PATCH /payments/{id}/reject` · `DELETE /payments/{id}`
 - `GET /dashboard/stats` — total/aktif penyewa, tagihan menunggu + nilai, pemasukan bulan ini vs lalu, by_kategori, revenue_6m (bucket WITA), recent_payments
+- `GET /payments/overdue` → **OverdueSummary** (rekap tunggakan): tagihan `menunggu` yang `jatuh_tempo` < hari ini (WITA, `today_iso()`), diperkaya `hari_telat` + kategori/blok/no_hp penyewa, **urut telat terlama dulu**, plus agregat `jumlah_penyewa` / `total_tunggakan` / `telat_terlama`. Tagihan tanpa `jatuh_tempo` tidak dihitung menunggak.
+- `POST /payments/bulk-monthly` → **BulkBillResult**: menerbitkan tagihan bulan berjalan untuk semua penyewa **bulanan berstatus aktif** (jatuh tempo tanggal 10, catatan "Tagihan massal bulanan"). **Idempotent** — penyewa yang sudah punya tagihan `periode` tersebut dilewati (`dilewati`); dicatat ke riwayat aktivitas dengan `entity_id="bulk"`.
+  Kedua rute statis ini didefinisikan **sebelum** rute `/{id}` agar tidak tertangkap path-param.
 - `GET /laporan/pembayaran.xlsx` — rekap pembayaran Excel (openpyxl: header desa, baris Filter, 9 kolom, total lunas & menunggu). **Filter opsional**: `bulan=YYYY-MM` (dihitung pada zona WITA), `kategori=harian|bulanan|tahunan` (lewat tenant_id penyewa kategori itu), `status=menunggu|lunas|ditolak`; kategori/status tak dikenal → 422. Nama file memuat filter aktif. Diunduh dari frontend via anchor same-origin agar cookie sesi terkirim
 - `GET /activities` (query: entity, limit≤500) — riwayat aktivitas terbaru lebih dulu
 
@@ -48,8 +51,9 @@ topbar putih dengan jam WITA, konten slate-50, aksen emas amber.
 
 ## Halaman frontend (src/pages)
 - `/` Dashboard: 4 kartu statistik, grafik tren pemasukan (recharts), daftar pembayaran terbaru + tombol verifikasi cepat
-- `/lapak` Pendataan Lapak: CRUD penyewa (dialog form), filter kategori (pill), pencarian, tombol QR per baris (dialog kartu QR + unduh PNG), hapus dengan konfirmasi
-- `/pembayaran` Konfirmasi Pembayaran: tab Menunggu/Lunas/Semua, konfirmasi 1-klik (lunas), tolak, hapus, catat pembayaran baru (dialog, tarif prefill)
+- `/lapak` Pendataan Lapak: CRUD penyewa (dialog form, **tarif otomatis** terisi dari acuan kategori — `TARIF_DEFAULT` di `src/lib/format.ts`: harian 25rb / bulanan 450rb / tahunan 5jt; nilai yang diketik manual TIDAK ditimpa saat kategori diubah, dan teks acuan tampil di bawah kolom tarif), filter kategori (pill), pencarian, tombol QR per baris (dialog kartu QR + unduh PNG + cetak kartu), pengingat WA, hapus dengan konfirmasi
+- `/pembayaran` Konfirmasi Pembayaran: tab Menunggu/Lunas/Semua, konfirmasi 1-klik (lunas), tolak, hapus, catat pembayaran baru (dialog, tarif prefill), kuitansi (status lunas), Ekspor Excel berfilter, **Tagihan Massal** (dialog ringkasan jumlah penyewa bulanan + estimasi nilai sebelum diterbitkan), pengingat WA pada tagihan menunggu
+- `/tunggakan` Rekap Tunggakan: 3 kartu agregat (total tunggakan, penyewa telat, keterlambatan terlama) + tabel urut telat terlama dengan badge warna (≥30 hari merah, ≥7 hari amber, sisanya netral), konfirmasi cepat & pengingat WA per baris
 - `/scan-qr` Pindai QR: kamera html5-qrcode (tombol Aktifkan Kamera; HTTPS/localhost saja), fallback input manual Nomor ID; hasil = dossier penyewa + tagihan/riwayat + konfirmasi + catat pembayaran + pengingat WA
 - `/riwayat` Riwayat Aktivitas: timeline siapa/apa/kapan, filter per entitas
 - `/pengaturan` Pengaturan Akun: ganti password + info akun & keamanan
@@ -60,6 +64,7 @@ topbar putih dengan jam WITA, konten slate-50, aksen emas amber.
 JSON `{"nomor_id":"LPK-JMB-001","nama":"I Wayan Sudira"}` — hanya Nama Lengkap & Nomor ID. Scanner mem-parse JSON (fallback: teks mentah sebagai nomor_id) lalu GET `/tenants/by-nomor/...`.
 
 ## Seed
+`cd /app/backend && python seed.py` — idempotent (reset & insert ulang): 14 penyewa (nama Bali, Blok A Pangan/B Sayur/C Daging & Ikan/D Pakaian & Canang), 49 pembayaran: lunas 6 bulan terakhir (untuk grafik & kuitansi), tagihan menunggu bulan berjalan, plus **3 tunggakan sengaja lewat tempo** (1/2/3 bulan lalu pada 3 penyewa bulanan) agar Rekap Tunggakan punya data nyata. Counter `counters.lapak_seq` diset = jumlah penyewa sehingga nomor berikutnya LPK-JMB-015. Penyewa berhenti: LPK-JMB-011.
 `cd /app/backend && python seed.py` — idempotent (reset & insert ulang): 14 penyewa (nama Bali, Blok A Pangan/B Sayur/C Daging & Ikan/D Pakaian & Canang), 46 pembayaran (lunas 6 bulan terakhir untuk grafik, tagihan menunggu untuk alur konfirmasi). Penyewa berhenti: LPK-JMB-011.
 
 ## Catatan verifikasi

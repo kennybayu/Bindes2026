@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { Link, NavLink } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
+  AlarmClock,
   History,
   Landmark,
   LayoutDashboard,
@@ -30,6 +31,7 @@ const NAV_ITEMS = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard, end: true },
   { to: "/lapak", label: "Pendataan Lapak", icon: Store },
   { to: "/pembayaran", label: "Pembayaran", icon: ReceiptText, isPayments: true },
+  { to: "/tunggakan", label: "Rekap Tunggakan", icon: AlarmClock },
   { to: "/scan-qr", label: "Pindai QR", icon: ScanLine },
   { to: "/riwayat", label: "Riwayat Aktivitas", icon: History },
   { to: "/pengaturan", label: "Pengaturan", icon: Settings },
