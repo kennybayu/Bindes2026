@@ -5,6 +5,7 @@ from typing import Any, List
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pymongo import ReturnDocument
 
+from lib.activity import log_activity
 from lib.db import db
 from lib.serialize import aware_utcnow, to_aware
 from models.payment import Payment, PaymentCreate
@@ -15,6 +16,10 @@ router = APIRouter(prefix="/payments", tags=["payments"], dependencies=[Depends(
 
 def _to_payment(doc: dict) -> Payment:
     return Payment(**to_aware(doc, "created_at", "confirmed_at"))
+
+
+def _label(doc: dict) -> str:
+    return f"{doc.get('nama_lengkap', '-')} ({doc.get('nomor_id', '-')})"
 
 
 @router.get("", response_model=List[Payment])
@@ -32,7 +37,7 @@ async def list_payments(
 
 
 @router.post("", response_model=Payment, status_code=201)
-async def create_payment(input: PaymentCreate):
+async def create_payment(input: PaymentCreate, actor: str = Depends(require_session)):
     tenant = await db.tenants.find_one({"id": input.tenant_id})
     if not tenant:
         raise HTTPException(status_code=404, detail="Penyewa tidak ditemukan")
@@ -49,11 +54,16 @@ async def create_payment(input: PaymentCreate):
         created_at=aware_utcnow(),
     )
     await db.payments.insert_one(payment.model_dump())
+    await log_activity(
+        actor, "buat", "pembayaran", payment.id,
+        f"{payment.nama_lengkap} ({payment.nomor_id})",
+        f"{payment.periode} — Rp {payment.jumlah:,}".replace(",", "."),
+    )
     return payment
 
 
 @router.patch("/{id}/confirm", response_model=Payment)
-async def confirm_payment(id: str):
+async def confirm_payment(id: str, actor: str = Depends(require_session)):
     doc = await db.payments.find_one_and_update(
         {"id": id},
         {"$set": {"status": "lunas", "confirmed_at": aware_utcnow()}},
@@ -61,11 +71,15 @@ async def confirm_payment(id: str):
     )
     if not doc:
         raise HTTPException(status_code=404, detail="Pembayaran tidak ditemukan")
+    await log_activity(
+        actor, "konfirmasi", "pembayaran", id, _label(doc),
+        f"{doc.get('periode', '')} — Rp {int(doc.get('jumlah', 0)):,}".replace(",", "."),
+    )
     return _to_payment(doc)
 
 
 @router.patch("/{id}/reject", response_model=Payment)
-async def reject_payment(id: str):
+async def reject_payment(id: str, actor: str = Depends(require_session)):
     doc = await db.payments.find_one_and_update(
         {"id": id},
         {"$set": {"status": "ditolak"}},
@@ -73,12 +87,16 @@ async def reject_payment(id: str):
     )
     if not doc:
         raise HTTPException(status_code=404, detail="Pembayaran tidak ditemukan")
+    await log_activity(actor, "tolak", "pembayaran", id, _label(doc), doc.get("periode", ""))
     return _to_payment(doc)
 
 
 @router.delete("/{id}")
-async def delete_payment(id: str):
+async def delete_payment(id: str, actor: str = Depends(require_session)):
+    doc = await db.payments.find_one({"id": id})
     result = await db.payments.delete_one({"id": id})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Pembayaran tidak ditemukan")
+    if doc:
+        await log_activity(actor, "hapus", "pembayaran", id, _label(doc), doc.get("periode", ""))
     return {"deleted": True}

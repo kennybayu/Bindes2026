@@ -6,6 +6,7 @@ from typing import Any, List
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pymongo import ReturnDocument
 
+from lib.activity import log_activity
 from lib.db import db
 from lib.serialize import to_aware
 from models.tenant import Tenant, TenantCreate, TenantUpdate
@@ -48,7 +49,7 @@ async def list_tenants(
 
 
 @router.post("", response_model=Tenant, status_code=201)
-async def create_tenant(input: TenantCreate):
+async def create_tenant(input: TenantCreate, actor: str = Depends(require_session)):
     nomor_id = input.nomor_id.strip()
     if nomor_id:
         existing = await db.tenants.find_one({"nomor_id": nomor_id})
@@ -60,6 +61,11 @@ async def create_tenant(input: TenantCreate):
     payload["nomor_id"] = nomor_id
     tenant = Tenant(**payload)
     await db.tenants.insert_one(tenant.model_dump())
+    await log_activity(
+        actor, "buat", "penyewa", tenant.id,
+        f"{tenant.nama_lengkap} ({tenant.nomor_id})",
+        f"{tenant.kategori} — {tenant.blok}",
+    )
     return tenant
 
 
@@ -81,7 +87,7 @@ async def get_tenant(id: str):
 
 
 @router.put("/{id}", response_model=Tenant)
-async def update_tenant(id: str, input: TenantUpdate):
+async def update_tenant(id: str, input: TenantUpdate, actor: str = Depends(require_session)):
     updates = input.model_dump(exclude_unset=True, exclude_none=True)
     if not updates:
         raise HTTPException(status_code=422, detail="Tidak ada perubahan yang dikirim")
@@ -90,13 +96,25 @@ async def update_tenant(id: str, input: TenantUpdate):
     )
     if not doc:
         raise HTTPException(status_code=404, detail="Penyewa tidak ditemukan")
+    await log_activity(
+        actor, "ubah", "penyewa", id,
+        f"{doc.get('nama_lengkap', '-')} ({doc.get('nomor_id', '-')})",
+        "Ubah: " + ", ".join(sorted(updates.keys())),
+    )
     return _to_tenant(doc)
 
 
 @router.delete("/{id}")
-async def delete_tenant(id: str):
+async def delete_tenant(id: str, actor: str = Depends(require_session)):
+    doc = await db.tenants.find_one({"id": id})
     result = await db.tenants.delete_one({"id": id})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Penyewa tidak ditemukan")
     await db.payments.delete_many({"tenant_id": id})
+    if doc:
+        await log_activity(
+            actor, "hapus", "penyewa", id,
+            f"{doc.get('nama_lengkap', '-')} ({doc.get('nomor_id', '-')})",
+            "beserta riwayat pembayarannya",
+        )
     return {"deleted": True}

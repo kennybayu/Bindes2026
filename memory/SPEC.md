@@ -19,16 +19,27 @@ topbar putih dengan jam WITA, konten slate-50, aksen emas amber.
 
 ## Auth (login pengelola)
 - Sesi = cookie **httpOnly `siplap_session`** (TTL 7 hari, koleksi `sessions` + TTL index). Tidak ada token di JSON.
-- `POST /auth/login` (username+password dari `ADMIN_USERNAME`/`ADMIN_PASSWORD` di backend/.env, dibanding `secrets.compare_digest`) · `GET /auth/me` · `POST /auth/logout`
-- **Semua** router data (`/tenants`, `/payments`, `/dashboard`, `/laporan`) di-gate `Depends(require_session)` → 401 tanpa sesi.
-- Frontend: `src/components/RequireAuth.tsx` (gerbang via `/auth/me`, redirect ke `/login`), `src/pages/Login.tsx` (`beginSession()` setelah sukses), tombol logout di topbar AppShell memakai `endSession()`.
+- Kredensial tersimpan di koleksi **`admins`** (`_id: "admin"`) sebagai hash **PBKDF2-SHA256** (`lib/security.py`, 200k iterasi, salt per-akun), di-**bootstrap sekali** dari `ADMIN_USERNAME`/`ADMIN_PASSWORD` di backend/.env saat login pertama — sesudah itu sumber kebenaran adalah Mongo, bukan .env.
+- `POST /auth/login` · `GET /auth/me` · `POST /auth/logout` · `POST /auth/change-password` (butuh `current_password`; `new_password` min 8 char, harus beda; mencabut semua sesi lain tapi mempertahankan sesi saat ini; dicatat ke riwayat aktivitas)
+- **Semua** router data (`/tenants`, `/payments`, `/dashboard`, `/laporan`, `/activities`) di-gate `Depends(require_session)` → 401 tanpa sesi.
+- Frontend: `src/components/RequireAuth.tsx` (gerbang via `/auth/me`, redirect ke `/login`), `src/pages/Login.tsx` (`beginSession()` setelah sukses), `src/pages/Pengaturan.tsx` (`/pengaturan` — ganti password + info akun), tombol logout di topbar AppShell memakai `endSession()`.
 - Kredensial: lihat memory/test_credentials.md.
 
 ## Endpoints /api
 - `GET /tenants` (query: q, kategori, status) · `POST /tenants` (201, auto nomor_id) · `GET/PUT/DELETE /tenants/{id}` (delete = kaskade hapus payments penyewa) · `GET /tenants/by-nomor/{nomor_id}` (dipakai scanner QR)
 - `GET /payments` (query: status, tenant_id) · `POST /payments` (status awal menunggu) · `PATCH /payments/{id}/confirm` · `PATCH /payments/{id}/reject` · `DELETE /payments/{id}`
 - `GET /dashboard/stats` — total/aktif penyewa, tagihan menunggu + nilai, pemasukan bulan ini vs lalu, by_kategori, revenue_6m (bucket WITA), recent_payments
-- `GET /laporan/pembayaran.xlsx` — rekap pembayaran Excel (openpyxl: header desa, 9 kolom, total lunas & menunggu); diunduh dari frontend via anchor same-origin agar cookie sesi terkirim
+- `GET /laporan/pembayaran.xlsx` — rekap pembayaran Excel (openpyxl: header desa, baris Filter, 9 kolom, total lunas & menunggu). **Filter opsional**: `bulan=YYYY-MM` (dihitung pada zona WITA), `kategori=harian|bulanan|tahunan` (lewat tenant_id penyewa kategori itu), `status=menunggu|lunas|ditolak`; kategori/status tak dikenal → 422. Nama file memuat filter aktif. Diunduh dari frontend via anchor same-origin agar cookie sesi terkirim
+- `GET /activities` (query: entity, limit≤500) — riwayat aktivitas terbaru lebih dulu
+
+## Riwayat aktivitas (audit trail)
+- Koleksi `activities`: `actor` (username pengelola), `action` (buat|ubah|hapus|konfirmasi|tolak), `entity` (penyewa|pembayaran|akun), `entity_id`, `label` siap tampil, `detail`, `created_at`
+- Ditulis oleh `lib/activity.py::log_activity` (best-effort — kegagalan log tidak menggagalkan aksi utama) dari: tenants create/update/delete, payments create/confirm/reject/delete, dan ganti password
+- `require_session` mengembalikan **username** sehingga handler memakai `actor: str = Depends(require_session)`
+- Frontend: `src/pages/Riwayat.tsx` (`/riwayat`) — timeline berikon, filter tab Semua/Pembayaran/Penyewa/Akun
+
+## Pengingat WhatsApp
+`src/lib/whatsapp.ts` — murni tautan `wa.me` pra-isi (TANPA integrasi/API key): `normalizePhoneID` (0812… → 62812…), `reminderText` (sapaan "Om Swastiastu", identitas lapak, nominal & jatuh tempo, opsi pembayaran), `waReminderLink` → `null` bila no_hp kosong (UI menampilkan toast error). Tombol ada di: baris tabel Lapak, baris pembayaran berstatus menunggu, dan hasil Pindai QR.
 
 ## Cetak (print)
 `@media print` di `src/index.css` hanya menampilkan elemen berkelas **`.print-area`**:
@@ -39,7 +50,10 @@ topbar putih dengan jam WITA, konten slate-50, aksen emas amber.
 - `/` Dashboard: 4 kartu statistik, grafik tren pemasukan (recharts), daftar pembayaran terbaru + tombol verifikasi cepat
 - `/lapak` Pendataan Lapak: CRUD penyewa (dialog form), filter kategori (pill), pencarian, tombol QR per baris (dialog kartu QR + unduh PNG), hapus dengan konfirmasi
 - `/pembayaran` Konfirmasi Pembayaran: tab Menunggu/Lunas/Semua, konfirmasi 1-klik (lunas), tolak, hapus, catat pembayaran baru (dialog, tarif prefill)
-- `/scan-qr` Pindai QR: kamera html5-qrcode (tombol Aktifkan Kamera; HTTPS/localhost saja), fallback input manual Nomor ID; hasil = dossier penyewa + tagihan/riwayat + konfirmasi + catat pembayaran
+- `/scan-qr` Pindai QR: kamera html5-qrcode (tombol Aktifkan Kamera; HTTPS/localhost saja), fallback input manual Nomor ID; hasil = dossier penyewa + tagihan/riwayat + konfirmasi + catat pembayaran + pengingat WA
+- `/riwayat` Riwayat Aktivitas: timeline siapa/apa/kapan, filter per entitas
+- `/pengaturan` Pengaturan Akun: ganti password + info akun & keamanan
+- `/login` Login pengelola (di luar shell)
 - Shell: `src/components/AppShell.tsx` (sidebar gelap + drawer mobile + topbar jam WITA + badge jumlah menunggu)
 
 ## QR payload

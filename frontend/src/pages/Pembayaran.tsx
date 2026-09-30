@@ -1,10 +1,11 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Check, FileSpreadsheet, Plus, ReceiptText, Trash2, X } from "lucide-react";
+import { Check, FileSpreadsheet, MessageCircle, Plus, ReceiptText, Trash2, X } from "lucide-react";
 import { apiDelete, apiGet, apiPatch } from "@/lib/api";
 import { METODE_LABEL, formatDateTimeID, formatRupiah, initials } from "@/lib/format";
-import type { Payment } from "@/lib/types";
+import type { Payment, Tenant } from "@/lib/types";
+import { waReminderLink } from "@/lib/whatsapp";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -18,6 +19,7 @@ import {
 import { StatusBadge } from "@/components/Badges";
 import PaymentRecordDialog from "@/components/PaymentRecordDialog";
 import ReceiptDialog from "@/components/ReceiptDialog";
+import ExportDialog from "@/components/ExportDialog";
 import { cn } from "@/lib/utils";
 
 const TABS = [
@@ -33,14 +35,26 @@ export default function Pembayaran() {
   const [tab, setTab] = useState<TabKey>("menunggu");
   const [recordOpen, setRecordOpen] = useState(false);
   const [receipt, setReceipt] = useState<Payment | null>(null);
+  const [exportOpen, setExportOpen] = useState(false);
 
-  // Unduh Excel: anchor same-origin agar cookie sesi httpOnly ikut terkirim.
-  const exportExcel = () => {
-    const anchor = document.createElement("a");
-    anchor.href = "/api/laporan/pembayaran.xlsx";
-    anchor.download = "";
-    anchor.click();
-    toast.success("Laporan Excel sedang diunduh");
+  // Daftar penyewa untuk mengambil no. HP saat mengirim pengingat WhatsApp.
+  const { data: tenants } = useQuery({
+    queryKey: ["tenants"],
+    queryFn: () => apiGet<Tenant[]>("/tenants"),
+  });
+
+  const kirimPengingat = (p: Payment) => {
+    const tenant = tenants?.find((t) => t.id === p.tenant_id);
+    if (!tenant) {
+      toast.error("Data penyewa tidak ditemukan");
+      return;
+    }
+    const link = waReminderLink(tenant, p);
+    if (!link) {
+      toast.error(`Nomor HP ${p.nama_lengkap} belum diisi`);
+      return;
+    }
+    window.open(link, "_blank", "noopener");
   };
 
   const { data: payments, isPending, isError, refetch } = useQuery({
@@ -108,7 +122,7 @@ export default function Pembayaran() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={exportExcel} data-testid="btn-ekspor-excel">
+          <Button variant="outline" onClick={() => setExportOpen(true)} data-testid="btn-ekspor-excel">
             <FileSpreadsheet data-icon="inline-start" className="size-4" />
             Ekspor Excel
           </Button>
@@ -243,6 +257,15 @@ export default function Pembayaran() {
                             <Button
                               variant="ghost"
                               size="icon-sm"
+                              onClick={() => kirimPengingat(p)}
+                              data-testid={`btn-wa-bayar-${idx}`}
+                              title="Kirim pengingat WhatsApp"
+                            >
+                              <MessageCircle className="size-4 text-emerald-600" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon-sm"
                               onClick={() => reject.mutate(p.id)}
                               data-testid={`btn-tolak-${idx}`}
                               title="Tolak pembayaran"
@@ -287,6 +310,7 @@ export default function Pembayaran() {
         open={!!receipt}
         onOpenChange={(v) => !v && setReceipt(null)}
       />
+      <ExportDialog open={exportOpen} onOpenChange={setExportOpen} />
     </div>
   );
 }

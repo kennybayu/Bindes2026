@@ -5,6 +5,8 @@ import Dashboard from "@/pages/Dashboard";
 import Lapak from "@/pages/Lapak";
 import Login from "@/pages/Login";
 import Pembayaran from "@/pages/Pembayaran";
+import Pengaturan from "@/pages/Pengaturan";
+import Riwayat from "@/pages/Riwayat";
 import ScanQr from "@/pages/ScanQr";
 import { Toaster } from "@/components/ui/sonner";
 
@@ -30,6 +32,8 @@ function Protected() {
           <Route path="/lapak" element={<Lapak />} />
           <Route path="/pembayaran" element={<Pembayaran />} />
           <Route path="/scan-qr" element={<ScanQr />} />
+          <Route path="/riwayat" element={<Riwayat />} />
+          <Route path="/pengaturan" element={<Pengaturan />} />
           <Route path="*" element={<Dashboard />} />
         </Routes>
       </AppShell>

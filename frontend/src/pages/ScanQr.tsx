@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Html5Qrcode } from "html5-qrcode";
 import { toast } from "sonner";
-import { Camera, ScanLine, SquarePen } from "lucide-react";
+import { Camera, MessageCircle, ScanLine, SquarePen } from "lucide-react";
 import { apiGet, apiPatch } from "@/lib/api";
 import {
   KATEGORI_LABEL,
@@ -24,6 +24,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { KategoriBadge, StatusBadge } from "@/components/Badges";
 import PaymentRecordDialog from "@/components/PaymentRecordDialog";
+import { waReminderLink } from "@/lib/whatsapp";
 
 export default function ScanQr() {
   const qc = useQueryClient();
@@ -307,10 +308,28 @@ export default function ScanQr() {
                   </div>
                 </div>
 
-                <Button onClick={() => setRecordOpen(true)} data-testid="btn-catat-dari-scan">
-                  <SquarePen data-icon="inline-start" className="size-4" />
-                  Catat Pembayaran
-                </Button>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      const pending = (bills ?? []).find((b) => b.status === "menunggu");
+                      const link = waReminderLink(tenant, pending);
+                      if (!link) {
+                        toast.error(`Nomor HP ${tenant.nama_lengkap} belum diisi`);
+                        return;
+                      }
+                      window.open(link, "_blank", "noopener");
+                    }}
+                    data-testid="btn-wa-scan"
+                  >
+                    <MessageCircle data-icon="inline-start" className="size-4 text-emerald-600" />
+                    Pengingat WA
+                  </Button>
+                  <Button onClick={() => setRecordOpen(true)} data-testid="btn-catat-dari-scan">
+                    <SquarePen data-icon="inline-start" className="size-4" />
+                    Catat Pembayaran
+                  </Button>
+                </div>
               </div>
             )}
           </CardContent>

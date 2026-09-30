@@ -1,5 +1,17 @@
 // Mirror tangan dari model Pydantic di backend/models/ — jaga sinkron di edit yang sama.
 
+// Mirror Activity di backend/models/activity.py
+export interface Activity {
+  id: string;
+  actor: string;
+  action: string; // buat | ubah | hapus | konfirmasi | tolak
+  entity: string; // penyewa | pembayaran | akun
+  entity_id: string;
+  label: string;
+  detail: string;
+  created_at: string;
+}
+
 // Mirror MeOutput di backend/routers/auth.py
 export interface MeOutput {
   username: string;

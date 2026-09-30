@@ -2,12 +2,14 @@ import { useEffect, useState, type ReactNode } from "react";
 import { Link, NavLink } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
+  History,
   Landmark,
   LayoutDashboard,
   LogOut,
   Menu,
   ReceiptText,
   ScanLine,
+  Settings,
   Store,
 } from "lucide-react";
 import { apiGet } from "@/lib/api";
@@ -29,6 +31,8 @@ const NAV_ITEMS = [
   { to: "/lapak", label: "Pendataan Lapak", icon: Store },
   { to: "/pembayaran", label: "Pembayaran", icon: ReceiptText, isPayments: true },
   { to: "/scan-qr", label: "Pindai QR", icon: ScanLine },
+  { to: "/riwayat", label: "Riwayat Aktivitas", icon: History },
+  { to: "/pengaturan", label: "Pengaturan", icon: Settings },
 ];
 
 function Brand() {

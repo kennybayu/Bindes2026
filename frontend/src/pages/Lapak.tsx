@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Pencil, Plus, QrCode, Search, Store, Trash2 } from "lucide-react";
+import { MessageCircle, Pencil, Plus, QrCode, Search, Store, Trash2 } from "lucide-react";
 import { apiDelete, apiGet } from "@/lib/api";
 import {
   KATEGORI_LABEL,
@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { KategoriBadge } from "@/components/Badges";
+import { waReminderLink } from "@/lib/whatsapp";
 import TenantFormDialog from "@/components/TenantFormDialog";
 import QrCardDialog from "@/components/QrCardDialog";
 import { cn } from "@/lib/utils";
@@ -242,6 +243,22 @@ export default function Lapak() {
                           title="Lihat QR Code"
                         >
                           <QrCode className="size-4 text-amber-600" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          onClick={() => {
+                            const link = waReminderLink(t);
+                            if (!link) {
+                              toast.error(`Nomor HP ${t.nama_lengkap} belum diisi`);
+                              return;
+                            }
+                            window.open(link, "_blank", "noopener");
+                          }}
+                          data-testid={`btn-wa-${idx}`}
+                          title="Kirim pengingat WhatsApp"
+                        >
+                          <MessageCircle className="size-4 text-emerald-600" />
                         </Button>
                         <Button
                           variant="ghost"
