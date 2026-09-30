@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { ApiError, apiPost, apiPut } from "@/lib/api";
-import { KATEGORI_LABEL, STATUS_PENYEWA_LABEL, TARIF_DEFAULT, formatRupiah } from "@/lib/format";
+import { KATEGORI_LABEL, STATUS_PENYEWA_LABEL, formatRupiah } from "@/lib/format";
+import { TARIF_DEFAULT, BRANDING } from "@/config";
 import type { KategoriSewa, StatusPenyewa, Tenant, TenantCreate } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import {
@@ -128,7 +129,7 @@ export default function TenantFormDialog({ open, onOpenChange, tenant }: Props) 
           <DialogTitle>{tenant ? "Ubah Data Penyewa" : "Tambah Penyewa Lapak"}</DialogTitle>
           <DialogDescription>
             {tenant
-              ? "Perbarui data penyewa lapak pasar Desa Adat Jimbaran."
+              ? `Perbarui data penyewa lapak ${BRANDING.namaPasar}.`
               : "Isi data penyewa baru. Nomor ID dan QR Code dibuat otomatis setelah tersimpan."}
           </DialogDescription>
         </DialogHeader>

@@ -1,5 +1,6 @@
 import { toast } from "sonner";
 import { Printer } from "lucide-react";
+import { BRANDING } from "@/config";
 import { METODE_LABEL, formatDateTimeID, formatRupiah, terbilangIDR } from "@/lib/format";
 import type { Payment } from "@/lib/types";
 import { Button } from "@/components/ui/button";
@@ -34,8 +35,8 @@ export default function ReceiptDialog({ payment, open, onOpenChange }: Props) {
           <>
             <div className="print-area rounded-2xl border border-border p-5" data-testid="kuitansi-preview">
               <div className="border-b border-slate-300 pb-3 text-center">
-                <p className="text-sm font-bold tracking-wide text-slate-900 uppercase">Desa Adat Jimbaran</p>
-                <p className="text-xs text-slate-500">Pasar Adat Jimbaran — Kuitansi Resmi</p>
+                <p className="text-sm font-bold tracking-wide text-slate-900 uppercase">{BRANDING.namaDesa}</p>
+                <p className="text-xs text-slate-500">{BRANDING.namaPasar} — Kuitansi Resmi</p>
                 <p className="mt-1 font-mono text-xs text-slate-700" data-testid="kuitansi-nomor">
                   No. KW-{payment.id.replace(/-/g, "").slice(0, 8).toUpperCase()}
                 </p>
@@ -77,9 +78,9 @@ export default function ReceiptDialog({ payment, open, onOpenChange }: Props) {
                   LUNAS
                 </span>
                 <span className="text-right text-slate-500">
-                  Bendahara Pasar Adat
+                  {BRANDING.jabatanPenandatangan}
                   <br />
-                  Desa Adat Jimbaran
+                  {BRANDING.namaDesa}
                 </span>
               </div>
             </div>

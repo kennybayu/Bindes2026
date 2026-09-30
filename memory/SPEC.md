@@ -17,6 +17,13 @@ topbar putih dengan jam WITA, konten slate-50, aksen emas amber.
 - `payments` (Pembayaran): `id`, `tenant_id`, denormalisasi `nomor_id`+`nama_lengkap`, `periode` (label bebas), `jumlah`, `metode` (tunai|qris|transfer), `status` (**menunggu → lunas** via confirm; bisa `ditolak` via reject), `jatuh_tempo`, `catatan`, `confirmed_at`, `created_at`
 - Indexes di `backend/lib/db.py` INDEXES (id/nomor_id unik, tenant_created, status_created)
 
+## Pusat konfigurasi (WAJIB dipakai, jangan hardcode ulang)
+Semua teks/angka yang mungkin diubah pengelola sudah dipusatkan — **tidak ada lagi nama desa, tarif, atau zona waktu yang ditulis langsung di komponen**:
+- `frontend/src/config.ts` → `BRANDING` (namaDesa, namaPasar, versi, jabatanPenandatangan, zonaWaktu, labelZonaWaktu), `TARIF_DEFAULT` (acuan tarif per kategori), `PESAN_WA` (template sapaan/identitas/penutup dengan penanda `{nama}`, `{blok}`, `{nomorId}`, `{namaPasar}`, `{namaDesa}`)
+- `backend/lib/config.py` → `NAMA_DESA`, `NAMA_PASAR`, `JUDUL_LAPORAN_EXCEL`, `LABEL_ZONA_WAKTU`, `TARIF_DEFAULT`, `JATUH_TEMPO_TANGGAL_BULANAN`, `TEMPO_HARI_HARIAN`, `CATATAN_TAGIHAN_MASSAL`, `NAMA_BULAN_ID`
+- `TARIF_DEFAULT` ada di kedua sisi dan **harus dijaga sama**; zona waktu perhitungan tetap dari `APP_TZ` di backend/.env (config hanya label tampilan).
+- Panduan pengelola berbahasa Indonesia: **`/app/PANDUAN.md`** (aturan emas, peta folder, tabel "mau ubah apa di mana", cara ganti database/backup/restore, migrasi ke SQL, troubleshooting, daftar endpoint). Perbarui file ini bila menambah pengaturan baru.
+
 ## Auth (login pengelola)
 - Sesi = cookie **httpOnly `siplap_session`** (TTL 7 hari, koleksi `sessions` + TTL index). Tidak ada token di JSON.
 - Kredensial tersimpan di koleksi **`admins`** (`_id: "admin"`) sebagai hash **PBKDF2-SHA256** (`lib/security.py`, 200k iterasi, salt per-akun), di-**bootstrap sekali** dari `ADMIN_USERNAME`/`ADMIN_PASSWORD` di backend/.env saat login pertama — sesudah itu sumber kebenaran adalah Mongo, bukan .env.

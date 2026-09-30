@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import QRCode from "qrcode";
 import { toast } from "sonner";
 import { Download, Printer } from "lucide-react";
+import { BRANDING } from "@/config";
 import type { Tenant } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import {
@@ -74,7 +75,7 @@ export default function QrCardDialog({ tenant, open, onOpenChange }: Props) {
                 <span className="flex size-8 items-center justify-center rounded-lg bg-amber-500 text-xs font-bold text-slate-900">
                   JMB
                 </span>
-                <span className="text-xs font-medium text-slate-300">Desa Adat Jimbaran</span>
+                <span className="text-xs font-medium text-slate-300">{BRANDING.namaDesa}</span>
               </div>
               <span className="rounded-full bg-amber-500 px-2.5 py-0.5 text-xs font-semibold text-slate-900">
                 ID Lapak

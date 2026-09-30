@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/card";
 import { StatusBadge } from "@/components/Badges";
 import { cn } from "@/lib/utils";
+import { BRANDING } from "@/config";
 
 type IconType = typeof Store;
 
@@ -95,7 +96,7 @@ export default function Dashboard() {
             Dashboard
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Ringkasan pendataan lapak &amp; pembayaran — Pasar Adat Jimbaran
+            Ringkasan pendataan lapak &amp; pembayaran — {BRANDING.namaPasar}
           </p>
         </div>
         <div className="flex gap-2">

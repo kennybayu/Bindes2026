@@ -1,3 +1,5 @@
+import { BRANDING } from "@/config";
+
 // Helper format tampilan (IDR, tanggal Indonesia, inisial). Hanya untuk tampilan —
 // tanggal bisnis ("hari ini") selalu dihitung server-side.
 
@@ -25,7 +27,7 @@ export function formatDateTimeID(iso: string | null): string {
   return dt.toLocaleString("id-ID", {
     dateStyle: "medium",
     timeStyle: "short",
-    timeZone: "Asia/Makassar",
+    timeZone: BRANDING.zonaWaktu,
   });
 }
 
@@ -65,13 +67,6 @@ export function terbilangIDR(n: number): string {
   const words = terbilang(Math.floor(n)).replace(/\s+/g, " ").trim();
   return `${words.charAt(0).toUpperCase()}${words.slice(1)} rupiah`;
 }
-
-/** Tarif acuan per kategori sewa — dipakai untuk mengisi tarif otomatis di form penyewa. */
-export const TARIF_DEFAULT: Record<string, number> = {
-  harian: 25_000,
-  bulanan: 450_000,
-  tahunan: 5_000_000,
-};
 
 export const KATEGORI_LABEL: Record<string, string> = {
   harian: "Harian",

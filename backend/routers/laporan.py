@@ -10,6 +10,7 @@ from fastapi.responses import StreamingResponse
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill
 
+from lib.config import JUDUL_LAPORAN_EXCEL, LABEL_ZONA_WAKTU
 from lib.db import db
 from lib.dates import today_iso
 from lib.serialize import to_aware
@@ -83,13 +84,13 @@ async def export_pembayaran_xlsx(
     ws.title = "Rekap Pembayaran"
 
     ws.merge_cells("A1:I1")
-    ws["A1"] = "REKAP PEMBAYARAN SEWA LAPAK — PASAR ADAT DESA ADAT JIMBARAN"
+    ws["A1"] = JUDUL_LAPORAN_EXCEL
     ws["A1"].font = Font(bold=True, size=13)
     ws.merge_cells("A2:I2")
     ws["A2"] = f"Filter: {filter_text}"
     ws["A2"].font = Font(size=10, bold=True, color="B45309")
     ws.merge_cells("A3:I3")
-    ws["A3"] = f"Diekspor: {today_iso()} (WITA) • {len(payments)} transaksi"
+    ws["A3"] = f"Diekspor: {today_iso()} ({LABEL_ZONA_WAKTU}) • {len(payments)} transaksi"
     ws["A3"].font = Font(size=10, color="64748B")
 
     headers = [

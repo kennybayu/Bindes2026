@@ -7,6 +7,11 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pymongo import ReturnDocument
 
 from lib.activity import log_activity
+from lib.config import (
+    CATATAN_TAGIHAN_MASSAL,
+    JATUH_TEMPO_TANGGAL_BULANAN,
+    NAMA_BULAN_ID,
+)
 from lib.db import db
 from lib.dates import today_iso
 from lib.serialize import aware_utcnow, to_aware
@@ -30,8 +35,7 @@ def _label(doc: dict) -> str:
     return f"{doc.get('nama_lengkap', '-')} ({doc.get('nomor_id', '-')})"
 
 
-BULAN_ID = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli",
-            "Agustus", "September", "Oktober", "November", "Desember"]
+BULAN_ID = NAMA_BULAN_ID
 
 
 def _days_between(iso_awal: str, iso_akhir: str) -> int:
@@ -82,8 +86,8 @@ async def bulk_monthly_bills(actor: str = Depends(require_session)):
     hari_ini = today_iso()
     tahun, bulan = int(hari_ini[:4]), int(hari_ini[5:7])
     periode = f"{BULAN_ID[bulan - 1]} {tahun}"
-    # Jatuh tempo: tanggal 10 bulan berjalan
-    jatuh_tempo = f"{tahun:04d}-{bulan:02d}-10"
+    # Jatuh tempo: tanggal JATUH_TEMPO_TANGGAL_BULANAN (lib/config.py) bulan berjalan
+    jatuh_tempo = f"{tahun:04d}-{bulan:02d}-{JATUH_TEMPO_TANGGAL_BULANAN:02d}"
 
     dibuat = 0
     dilewati = 0
@@ -103,7 +107,7 @@ async def bulk_monthly_bills(actor: str = Depends(require_session)):
             metode="tunai",
             status="menunggu",
             jatuh_tempo=jatuh_tempo,
-            catatan="Tagihan massal bulanan",
+            catatan=CATATAN_TAGIHAN_MASSAL,
             created_at=aware_utcnow(),
         )
         baru.append(payment.model_dump())

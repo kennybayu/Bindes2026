@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { KeyRound, ShieldCheck } from "lucide-react";
+import { BRANDING } from "@/config";
 import { ApiError, apiGet, apiPost } from "@/lib/api";
 import type { MeOutput } from "@/lib/types";
 import { Button } from "@/components/ui/button";
@@ -72,7 +73,7 @@ export default function Pengaturan() {
           Pengaturan Akun
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Kelola kredensial pengelola pasar Desa Adat Jimbaran
+          Kelola kredensial pengelola {BRANDING.namaPasar}
         </p>
       </div>
 

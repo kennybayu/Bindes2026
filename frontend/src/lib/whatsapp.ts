@@ -1,8 +1,10 @@
 // Tautan pengingat WhatsApp — wa.me tanpa integrasi/API key, cukup tautan pra-isi.
+// Isi pesan & nama pasar diatur di src/config.ts (PESAN_WA & BRANDING).
 import type { Payment, Tenant } from "@/lib/types";
 import { formatDateID, formatRupiah } from "@/lib/format";
+import { BRANDING, PESAN_WA } from "@/config";
 
-/** 0812-3456-7801 -> 62812345678 01 -> 628123456780 1 (E.164 tanpa '+'). */
+/** 0812-3456-7801 -> 6281234567801 (format E.164 tanpa tanda '+'). */
 export function normalizePhoneID(raw: string): string {
   const digits = raw.replace(/\D/g, "");
   if (!digits) return "";
@@ -11,20 +13,28 @@ export function normalizePhoneID(raw: string): string {
   return `62${digits}`;
 }
 
+/** Ganti penanda {nama}, {blok}, {nomorId}, {namaPasar} dengan data sebenarnya. */
+function isiTemplate(template: string, tenant: Tenant): string {
+  return template
+    .replaceAll("{nama}", tenant.nama_lengkap)
+    .replaceAll("{blok}", tenant.blok)
+    .replaceAll("{nomorId}", tenant.nomor_id)
+    .replaceAll("{namaPasar}", BRANDING.namaPasar)
+    .replaceAll("{namaDesa}", BRANDING.namaDesa);
+}
+
 export function reminderText(tenant: Tenant, payment?: Payment | null): string {
-  const sapaan = `Om Swastiastu, Bapak/Ibu ${tenant.nama_lengkap}.`;
-  const identitas = `Kami dari pengelola Pasar Adat Desa Adat Jimbaran. Data lapak Bapak/Ibu: ${tenant.blok} (Nomor ID ${tenant.nomor_id}).`;
+  const sapaan = isiTemplate(PESAN_WA.sapaan, tenant);
+  const identitas = isiTemplate(PESAN_WA.identitas, tenant);
   const tagihan = payment
     ? `Mohon informasi pembayaran sewa untuk ${payment.periode} sebesar ${formatRupiah(payment.jumlah)}${
         payment.jatuh_tempo ? ` yang jatuh tempo pada ${formatDateID(payment.jatuh_tempo)}` : ""
       }, saat ini masih menunggu konfirmasi.`
     : `Mohon informasi pembayaran sewa lapak sebesar ${formatRupiah(tenant.tarif)} untuk periode berjalan (masa sewa s.d. ${formatDateID(tenant.selesai)}).`;
-  const penutup =
-    "Pembayaran dapat dilakukan tunai kepada juru pungut pasar, QRIS Desa Adat, atau transfer LPD Jimbaran. Terima kasih atas kerja samanya. Suksma 🙏";
-  return [sapaan, identitas, tagihan, penutup].join("\n\n");
+  return [sapaan, identitas, tagihan, PESAN_WA.penutup].join("\n\n");
 }
 
-/** Buka WhatsApp dengan pesan pengingat; `null` bila nomor HP belum terisi. */
+/** Tautan wa.me siap buka, atau null bila nomor HP penyewa belum diisi. */
 export function waReminderLink(tenant: Tenant, payment?: Payment | null): string | null {
   const phone = normalizePhoneID(tenant.no_hp);
   if (!phone) return null;

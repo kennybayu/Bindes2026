@@ -3,6 +3,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { Navigate, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { Landmark, LogIn } from "lucide-react";
+import { BRANDING } from "@/config";
 import { ApiError, apiGet, apiPost } from "@/lib/api";
 import { beginSession } from "@/lib/session";
 import type { MeOutput } from "@/lib/types";
@@ -59,7 +60,7 @@ export default function Login() {
             </span>
             <div>
               <h1 className="text-xl font-bold tracking-tight text-foreground" data-testid="judul-login">
-                Desa Adat Jimbaran
+                {BRANDING.namaDesa}
               </h1>
               <p className="mt-1 text-sm text-muted-foreground">
                 Masuk untuk mengelola lapak &amp; pembayaran pasar

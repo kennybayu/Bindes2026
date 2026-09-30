@@ -14,6 +14,7 @@ import {
   Store,
 } from "lucide-react";
 import { apiGet } from "@/lib/api";
+import { BRANDING } from "@/config";
 import { endSession } from "@/lib/session";
 import type { Payment } from "@/lib/types";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -44,7 +45,7 @@ function Brand() {
         <Landmark className="size-5" />
       </span>
       <span className="flex flex-col leading-tight">
-        <span className="text-sm font-bold tracking-tight text-white">Desa Adat Jimbaran</span>
+        <span className="text-sm font-bold tracking-tight text-white">{BRANDING.namaDesa}</span>
         <span className="text-xs text-slate-400">Lapak & Pembayaran</span>
       </span>
     </Link>
@@ -92,7 +93,7 @@ function SidebarNav({
   );
 }
 
-/** Jam pasar WITA (tampilan saja — tanggal bisnis tetap dari server). */
+/** Jam pasar (tampilan saja — tanggal bisnis tetap dari server). Zona waktu: src/config.ts */
 function ClockWita() {
   const [now, setNow] = useState(() => new Date());
   useEffect(() => {
@@ -100,13 +101,13 @@ function ClockWita() {
     return () => clearInterval(timer);
   }, []);
   const time = new Intl.DateTimeFormat("id-ID", {
-    timeZone: "Asia/Makassar",
+    timeZone: BRANDING.zonaWaktu,
     hour: "2-digit",
     minute: "2-digit",
     second: "2-digit",
   }).format(now);
   const date = new Intl.DateTimeFormat("id-ID", {
-    timeZone: "Asia/Makassar",
+    timeZone: BRANDING.zonaWaktu,
     weekday: "long",
     day: "numeric",
     month: "long",
@@ -115,7 +116,7 @@ function ClockWita() {
   return (
     <div className="hidden text-right sm:block" data-testid="jam-wita">
       <div className="font-mono text-sm font-semibold tracking-wider text-foreground">
-        {time} <span className="text-amber-600">WITA</span>
+        {time} <span className="text-amber-600">{BRANDING.labelZonaWaktu}</span>
       </div>
       <div className="text-xs text-muted-foreground">{date}</div>
     </div>
@@ -141,7 +142,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
           </div>
           <SidebarNav pendingCount={pendingCount} />
           <div className="mt-auto px-5 py-4 text-xs text-slate-500">
-            Pasar Adat Jimbaran • v1.0
+            {BRANDING.namaPasar} • {BRANDING.versi}
           </div>
         </aside>
 
@@ -155,7 +156,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
               <Menu className="size-5" />
             </SheetTrigger>
             <span className="text-sm font-bold tracking-tight text-foreground lg:hidden">
-              Desa Adat Jimbaran
+              {BRANDING.namaDesa}
             </span>
             <div className="ml-auto flex items-center gap-3">
               <ClockWita />
