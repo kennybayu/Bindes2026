@@ -37,6 +37,7 @@ if (!hotReloadDisabled) {
 export default defineConfig(async () => {
   const emergentOverlay = await loadEmergentOverlay();
   return {
+    base: "/Bindes2026/", // <-- Properti ini yang ditambahkan
     plugins: [
       react(),
       tailwindcss(),
