@@ -17,10 +17,23 @@ topbar putih dengan jam WITA, konten slate-50, aksen emas amber.
 - `payments` (Pembayaran): `id`, `tenant_id`, denormalisasi `nomor_id`+`nama_lengkap`, `periode` (label bebas), `jumlah`, `metode` (tunai|qris|transfer), `status` (**menunggu → lunas** via confirm; bisa `ditolak` via reject), `jatuh_tempo`, `catatan`, `confirmed_at`, `created_at`
 - Indexes di `backend/lib/db.py` INDEXES (id/nomor_id unik, tenant_created, status_created)
 
+## Auth (login pengelola)
+- Sesi = cookie **httpOnly `siplap_session`** (TTL 7 hari, koleksi `sessions` + TTL index). Tidak ada token di JSON.
+- `POST /auth/login` (username+password dari `ADMIN_USERNAME`/`ADMIN_PASSWORD` di backend/.env, dibanding `secrets.compare_digest`) · `GET /auth/me` · `POST /auth/logout`
+- **Semua** router data (`/tenants`, `/payments`, `/dashboard`, `/laporan`) di-gate `Depends(require_session)` → 401 tanpa sesi.
+- Frontend: `src/components/RequireAuth.tsx` (gerbang via `/auth/me`, redirect ke `/login`), `src/pages/Login.tsx` (`beginSession()` setelah sukses), tombol logout di topbar AppShell memakai `endSession()`.
+- Kredensial: lihat memory/test_credentials.md.
+
 ## Endpoints /api
 - `GET /tenants` (query: q, kategori, status) · `POST /tenants` (201, auto nomor_id) · `GET/PUT/DELETE /tenants/{id}` (delete = kaskade hapus payments penyewa) · `GET /tenants/by-nomor/{nomor_id}` (dipakai scanner QR)
 - `GET /payments` (query: status, tenant_id) · `POST /payments` (status awal menunggu) · `PATCH /payments/{id}/confirm` · `PATCH /payments/{id}/reject` · `DELETE /payments/{id}`
 - `GET /dashboard/stats` — total/aktif penyewa, tagihan menunggu + nilai, pemasukan bulan ini vs lalu, by_kategori, revenue_6m (bucket WITA), recent_payments
+- `GET /laporan/pembayaran.xlsx` — rekap pembayaran Excel (openpyxl: header desa, 9 kolom, total lunas & menunggu); diunduh dari frontend via anchor same-origin agar cookie sesi terkirim
+
+## Cetak (print)
+`@media print` di `src/index.css` hanya menampilkan elemen berkelas **`.print-area`**:
+- Kartu ID penyewa ber-QR (`QrCardDialog`, tombol "Cetak Kartu" + "Unduh PNG")
+- Kuitansi resmi desa (`ReceiptDialog`, tombol "Kuitansi" muncul hanya untuk pembayaran `lunas`) — nomor KW-xxxxxxxx, jumlah + **terbilang** (`terbilangIDR` di `src/lib/format.ts`), tanda tangan Bendahara Pasar Adat
 
 ## Halaman frontend (src/pages)
 - `/` Dashboard: 4 kartu statistik, grafik tren pemasukan (recharts), daftar pembayaran terbaru + tombol verifikasi cepat
@@ -31,9 +44,6 @@ topbar putih dengan jam WITA, konten slate-50, aksen emas amber.
 
 ## QR payload
 JSON `{"nomor_id":"LPK-JMB-001","nama":"I Wayan Sudira"}` — hanya Nama Lengkap & Nomor ID. Scanner mem-parse JSON (fallback: teks mentah sebagai nomor_id) lalu GET `/tenants/by-nomor/...`.
-
-## Auth
-Tidak ada login (MVP, sesuai request). Tidak ada kredensial — lihat memory/test_credentials.md.
 
 ## Seed
 `cd /app/backend && python seed.py` — idempotent (reset & insert ulang): 14 penyewa (nama Bali, Blok A Pangan/B Sayur/C Daging & Ikan/D Pakaian & Canang), 46 pembayaran (lunas 6 bulan terakhir untuk grafik, tagihan menunggu untuk alur konfirmasi). Penyewa berhenti: LPK-JMB-011.

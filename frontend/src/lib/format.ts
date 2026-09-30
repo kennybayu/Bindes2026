@@ -41,6 +41,31 @@ export function initials(name: string): string {
   return letters || "P";
 }
 
+const SATUAN = [
+  "", "satu", "dua", "tiga", "empat", "lima", "enam", "tujuh", "delapan", "sembilan",
+  "sepuluh", "sebelas",
+];
+
+/** Angka -> kata untuk kuitansi resmi, mis. 450000 -> "empat ratus lima puluh ribu rupiah". */
+function terbilang(n: number): string {
+  if (n < 12) return SATUAN[n];
+  if (n < 20) return `${terbilang(n - 10)} belas`;
+  if (n < 100) return `${terbilang(Math.floor(n / 10))} puluh ${terbilang(n % 10)}`.trim();
+  if (n < 200) return `seratus ${terbilang(n - 100)}`.trim();
+  if (n < 1000) return `${terbilang(Math.floor(n / 100))} ratus ${terbilang(n % 100)}`.trim();
+  if (n < 2000) return `seribu ${terbilang(n - 1000)}`.trim();
+  if (n < 1_000_000) return `${terbilang(Math.floor(n / 1000))} ribu ${terbilang(n % 1000)}`.trim();
+  if (n < 1_000_000_000)
+    return `${terbilang(Math.floor(n / 1_000_000))} juta ${terbilang(n % 1_000_000)}`.trim();
+  return `${terbilang(Math.floor(n / 1_000_000_000))} miliar ${terbilang(n % 1_000_000_000)}`.trim();
+}
+
+export function terbilangIDR(n: number): string {
+  if (!Number.isFinite(n) || n <= 0) return "nol rupiah";
+  const words = terbilang(Math.floor(n)).replace(/\s+/g, " ").trim();
+  return `${words.charAt(0).toUpperCase()}${words.slice(1)} rupiah`;
+}
+
 export const KATEGORI_LABEL: Record<string, string> = {
   harian: "Harian",
   bulanan: "Bulanan",

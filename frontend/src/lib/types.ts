@@ -1,5 +1,10 @@
 // Mirror tangan dari model Pydantic di backend/models/ — jaga sinkron di edit yang sama.
 
+// Mirror MeOutput di backend/routers/auth.py
+export interface MeOutput {
+  username: string;
+}
+
 export type KategoriSewa = "harian" | "bulanan" | "tahunan";
 export type StatusPenyewa = "aktif" | "berhenti";
 export type MetodeBayar = "tunai" | "qris" | "transfer";

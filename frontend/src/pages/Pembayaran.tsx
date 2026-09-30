@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Check, Plus, Trash2, X } from "lucide-react";
+import { Check, FileSpreadsheet, Plus, ReceiptText, Trash2, X } from "lucide-react";
 import { apiDelete, apiGet, apiPatch } from "@/lib/api";
 import { METODE_LABEL, formatDateTimeID, formatRupiah, initials } from "@/lib/format";
 import type { Payment } from "@/lib/types";
@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/table";
 import { StatusBadge } from "@/components/Badges";
 import PaymentRecordDialog from "@/components/PaymentRecordDialog";
+import ReceiptDialog from "@/components/ReceiptDialog";
 import { cn } from "@/lib/utils";
 
 const TABS = [
@@ -31,6 +32,16 @@ export default function Pembayaran() {
   const qc = useQueryClient();
   const [tab, setTab] = useState<TabKey>("menunggu");
   const [recordOpen, setRecordOpen] = useState(false);
+  const [receipt, setReceipt] = useState<Payment | null>(null);
+
+  // Unduh Excel: anchor same-origin agar cookie sesi httpOnly ikut terkirim.
+  const exportExcel = () => {
+    const anchor = document.createElement("a");
+    anchor.href = "/api/laporan/pembayaran.xlsx";
+    anchor.download = "";
+    anchor.click();
+    toast.success("Laporan Excel sedang diunduh");
+  };
 
   const { data: payments, isPending, isError, refetch } = useQuery({
     queryKey: ["payments"],
@@ -96,10 +107,16 @@ export default function Pembayaran() {
             Verifikasi dan konfirmasi pembayaran sewa lapak dari penyewa
           </p>
         </div>
-        <Button onClick={() => setRecordOpen(true)} data-testid="btn-buka-catat-pembayaran">
-          <Plus data-icon="inline-start" className="size-4" />
-          Catat Pembayaran
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={exportExcel} data-testid="btn-ekspor-excel">
+            <FileSpreadsheet data-icon="inline-start" className="size-4" />
+            Ekspor Excel
+          </Button>
+          <Button onClick={() => setRecordOpen(true)} data-testid="btn-buka-catat-pembayaran">
+            <Plus data-icon="inline-start" className="size-4" />
+            Catat Pembayaran
+          </Button>
+        </div>
       </div>
 
       <div className="mt-6 flex flex-wrap items-center gap-2">
@@ -234,6 +251,17 @@ export default function Pembayaran() {
                             </Button>
                           </>
                         )}
+                        {p.status === "lunas" && (
+                          <Button
+                            variant="outline"
+                            size="xs"
+                            onClick={() => setReceipt(p)}
+                            data-testid={`btn-kuitansi-${idx}`}
+                          >
+                            <ReceiptText data-icon="inline-start" className="size-3.5" />
+                            Kuitansi
+                          </Button>
+                        )}
                         <Button
                           variant="ghost"
                           size="icon-sm"
@@ -254,6 +282,11 @@ export default function Pembayaran() {
       </Card>
 
       <PaymentRecordDialog open={recordOpen} onOpenChange={setRecordOpen} tenant={null} />
+      <ReceiptDialog
+        payment={receipt}
+        open={!!receipt}
+        onOpenChange={(v) => !v && setReceipt(null)}
+      />
     </div>
   );
 }

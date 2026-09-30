@@ -4,12 +4,14 @@ import { useQuery } from "@tanstack/react-query";
 import {
   Landmark,
   LayoutDashboard,
+  LogOut,
   Menu,
   ReceiptText,
   ScanLine,
   Store,
 } from "lucide-react";
 import { apiGet } from "@/lib/api";
+import { endSession } from "@/lib/session";
 import type { Payment } from "@/lib/types";
 import { Button, buttonVariants } from "@/components/ui/button";
 
@@ -172,6 +174,15 @@ export default function AppShell({ children }: { children: ReactNode }) {
               >
                 PA
               </span>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => void endSession()}
+                data-testid="btn-logout"
+                title="Keluar"
+              >
+                <LogOut className="size-4" />
+              </Button>
             </div>
           </header>
 

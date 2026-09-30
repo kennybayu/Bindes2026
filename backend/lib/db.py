@@ -31,6 +31,10 @@ INDEXES: dict[str, list[IndexModel]] = {
         IndexModel([("status", ASCENDING), ("created_at", DESCENDING)], name="status_created"),
     ],
     "counters": [IndexModel([("_id", ASCENDING)], name="_id")],
+    "sessions": [
+        IndexModel([("token", ASCENDING)], name="token", unique=True),
+        IndexModel([("created_at", ASCENDING)], name="created_ttl", expireAfterSeconds=604800),
+    ],
 }
 
 

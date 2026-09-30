@@ -4,14 +4,15 @@ import os
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 
 from lib.db import db
 from lib.serialize import to_aware
 from models.dashboard import DashboardStats, RevenuePoint
 from models.payment import Payment
+from routers.auth import require_session
 
-router = APIRouter(prefix="/dashboard", tags=["dashboard"])
+router = APIRouter(prefix="/dashboard", tags=["dashboard"], dependencies=[Depends(require_session)])
 
 BULAN = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"]
 

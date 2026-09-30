@@ -3,14 +3,15 @@
 from datetime import datetime
 from typing import Any, List
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pymongo import ReturnDocument
 
 from lib.db import db
 from lib.serialize import to_aware
 from models.tenant import Tenant, TenantCreate, TenantUpdate
+from routers.auth import require_session
 
-router = APIRouter(prefix="/tenants", tags=["tenants"])
+router = APIRouter(prefix="/tenants", tags=["tenants"], dependencies=[Depends(require_session)])
 
 
 def _to_tenant(doc: dict) -> Tenant:

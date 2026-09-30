@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import QRCode from "qrcode";
 import { toast } from "sonner";
-import { Download } from "lucide-react";
+import { Download, Printer } from "lucide-react";
 import type { Tenant } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import {
@@ -68,7 +68,7 @@ export default function QrCardDialog({ tenant, open, onOpenChange }: Props) {
         </DialogHeader>
 
         {tenant && (
-          <div className="rounded-2xl bg-slate-900 p-6 text-white" data-testid="kartu-qr">
+          <div className="print-area rounded-2xl bg-slate-900 p-6 text-white" data-testid="kartu-qr">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className="flex size-8 items-center justify-center rounded-lg bg-amber-500 text-xs font-bold text-slate-900">
@@ -114,10 +114,21 @@ export default function QrCardDialog({ tenant, open, onOpenChange }: Props) {
           </div>
         )}
 
-        <Button onClick={download} disabled={!qrUrl} className="w-full" data-testid="btn-download-qr">
-          <Download data-icon="inline-start" className="size-4" />
-          Unduh PNG
-        </Button>
+        <div className="grid grid-cols-2 gap-2">
+          <Button
+            variant="outline"
+            onClick={download}
+            disabled={!qrUrl}
+            data-testid="btn-download-qr"
+          >
+            <Download data-icon="inline-start" className="size-4" />
+            Unduh PNG
+          </Button>
+          <Button onClick={() => window.print()} disabled={!qrUrl} data-testid="btn-cetak-kartu">
+            <Printer data-icon="inline-start" className="size-4" />
+            Cetak Kartu
+          </Button>
+        </div>
       </DialogContent>
     </Dialog>
   );

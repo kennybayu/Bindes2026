@@ -132,6 +132,25 @@
     }
 }
 
+/* Cetak: hanya .print-area (kuitansi / kartu QR) yang tampil di kertas */
+@media print {
+    body * {
+        visibility: hidden !important;
+    }
+    .print-area,
+    .print-area * {
+        visibility: visible !important;
+    }
+    .print-area {
+        position: absolute !important;
+        left: 0;
+        top: 0;
+        width: 100%;
+        border: none !important;
+        box-shadow: none !important;
+    }
+}
+
 /* Sinar pemindai QR pada viewfinder kamera */
 @keyframes scan-beam {
     0% { top: 12%; }

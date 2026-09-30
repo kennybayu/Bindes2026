@@ -2,14 +2,15 @@
 
 from typing import Any, List
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pymongo import ReturnDocument
 
 from lib.db import db
 from lib.serialize import aware_utcnow, to_aware
 from models.payment import Payment, PaymentCreate
+from routers.auth import require_session
 
-router = APIRouter(prefix="/payments", tags=["payments"])
+router = APIRouter(prefix="/payments", tags=["payments"], dependencies=[Depends(require_session)])
 
 
 def _to_payment(doc: dict) -> Payment:

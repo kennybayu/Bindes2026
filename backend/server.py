@@ -17,7 +17,7 @@ load_dotenv(ROOT_DIR / '.env')
 
 # MongoDB connection
 from lib.db import client, db, ensure_indexes
-from routers import dashboard, payments, tenants
+from routers import auth, dashboard, laporan, payments, tenants
 
 
 # Startup runs before the yield, shutdown after it. Add your own setup/teardown here.
@@ -62,9 +62,11 @@ async def get_status_checks():
     return [StatusCheck(**status_check) for status_check in status_checks]
 
 # Include the router in the main app
+api_router.include_router(auth.router)
 api_router.include_router(tenants.router)
 api_router.include_router(payments.router)
 api_router.include_router(dashboard.router)
+api_router.include_router(laporan.router)
 app.include_router(api_router)
 
 app.add_middleware(
