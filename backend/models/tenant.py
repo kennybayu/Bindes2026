@@ -31,24 +31,25 @@ class Tenant(BaseModel):
 
 class TenantCreate(BaseModel):
     nomor_id: str = ""  # kosongkan -> digenerate otomatis
-    nama_lengkap: str
-    no_hp: str = ""
+    nama_lengkap: str = Field(min_length=1, max_length=120)
+    no_hp: str = Field(default="", max_length=30)
     kategori: KategoriSewa
-    blok: str
-    tarif: int
+    blok: str = Field(min_length=1, max_length=120)
+    # Tarif wajib positif dan dalam batas wajar.
+    tarif: int = Field(gt=0, le=1_000_000_000)
     mulai: str
     selesai: str
     status: StatusPenyewa = "aktif"
-    catatan: str = ""
+    catatan: str = Field(default="", max_length=500)
 
 
 class TenantUpdate(BaseModel):
-    nama_lengkap: str | None = None
-    no_hp: str | None = None
+    nama_lengkap: str | None = Field(default=None, min_length=1, max_length=120)
+    no_hp: str | None = Field(default=None, max_length=30)
     kategori: KategoriSewa | None = None
-    blok: str | None = None
-    tarif: int | None = None
+    blok: str | None = Field(default=None, min_length=1, max_length=120)
+    tarif: int | None = Field(default=None, gt=0, le=1_000_000_000)
     mulai: str | None = None
     selesai: str | None = None
     status: StatusPenyewa | None = None
-    catatan: str | None = None
+    catatan: str | None = Field(default=None, max_length=500)

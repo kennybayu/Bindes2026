@@ -24,6 +24,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { StatusBadge } from "@/components/Badges";
+import DefaultPasswordAlert from "@/components/DefaultPasswordAlert";
 import { cn } from "@/lib/utils";
 import { BRANDING } from "@/config";
 
@@ -144,6 +145,7 @@ export default function Dashboard() {
       ) : (
         data && (
           <>
+            <DefaultPasswordAlert />
             <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4" data-testid="stat-cards">
               <StatCard
                 icon={Store}

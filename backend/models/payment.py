@@ -28,7 +28,8 @@ class Payment(BaseModel):
 class PaymentCreate(BaseModel):
     tenant_id: str
     periode: str
-    jumlah: int
+    # Nominal wajib positif — mencegah tagihan nol/negatif yang merusak rekap.
+    jumlah: int = Field(gt=0, le=1_000_000_000)
     metode: MetodeBayar = "tunai"
     jatuh_tempo: str = ""
     catatan: str = ""

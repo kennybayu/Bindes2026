@@ -1,23 +1,20 @@
 import asyncio
-from contextlib import asynccontextmanager
-from fastapi import FastAPI, APIRouter
-from dotenv import load_dotenv
-from starlette.middleware.cors import CORSMiddleware
-import os
 import logging
+import os
+from contextlib import asynccontextmanager
 from pathlib import Path
-from pydantic import BaseModel, Field
-from typing import List
-import uuid
-from datetime import datetime
 
+from dotenv import load_dotenv
+from fastapi import APIRouter, FastAPI
+from fastapi.responses import JSONResponse
+from starlette.middleware.cors import CORSMiddleware
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
 # MongoDB connection
-from lib.db import client, db, ensure_indexes
-from routers import activities, auth, dashboard, laporan, payments, tenants
+from lib.db import client, db, ensure_indexes  # noqa: E402
+from routers import activities, auth, dashboard, laporan, payments, tenants  # noqa: E402
 
 
 # Startup runs before the yield, shutdown after it. Add your own setup/teardown here.
@@ -35,31 +32,11 @@ app = FastAPI(lifespan=lifespan)
 api_router = APIRouter(prefix="/api")
 
 
-# Define Models
-class StatusCheck(BaseModel):
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    client_name: str
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
-
-class StatusCheckCreate(BaseModel):
-    client_name: str
-
-# Add your routes to the router instead of directly to app
 @api_router.get("/")
-async def root():
-    return {"message": "Hello World"}
+async def health():
+    """Health check untuk readiness probe. Sengaja tidak membocorkan data apa pun."""
+    return {"status": "ok"}
 
-@api_router.post("/status", response_model=StatusCheck)
-async def create_status_check(input: StatusCheckCreate):
-    status_dict = input.model_dump()
-    status_obj = StatusCheck(**status_dict)
-    _ = await db.status_checks.insert_one(status_obj.model_dump())
-    return status_obj
-
-@api_router.get("/status", response_model=List[StatusCheck])
-async def get_status_checks():
-    status_checks = await db.status_checks.find().to_list(1000)
-    return [StatusCheck(**status_check) for status_check in status_checks]
 
 # Include the router in the main app
 api_router.include_router(auth.router)
@@ -70,10 +47,63 @@ api_router.include_router(laporan.router)
 api_router.include_router(activities.router)
 app.include_router(api_router)
 
+
+@app.middleware("http")
+async def csrf_dan_security_headers(request, call_next):
+    """Proteksi CSRF + header pengerasan standar.
+
+    Cookie sesi diset `SameSite=Lax`, TETAPI ingress/CDN di depan aplikasi
+    menulisnya ulang menjadi `SameSite=None` (terpantau pada deployment ini),
+    sehingga proteksi SameSite tidak bisa diandalkan.
+
+    Pertahanan yang dipakai (tidak bergantung pada header Host, karena di balik
+    ingress `Host` bukan domain publik):
+
+    1. `Sec-Fetch-Site: cross-site` -> tolak. Header ini diisi OLEH BROWSER dan
+       termasuk forbidden header name, jadi tidak bisa dipalsukan halaman
+       penyerang. Permintaan non-browser (curl, health check) tidak mengirimnya
+       dan tetap diizinkan.
+    2. Permintaan ber-body wajib `Content-Type: application/json`. Form HTML
+       lintas situs hanya bisa mengirim urlencoded/multipart/text-plain, jadi
+       jalur CSRF klasik ikut tertutup pada browser lama tanpa Sec-Fetch-Site.
+
+    Dikombinasikan dengan CORS tanpa `allow_credentials`, fetch/XHR lintas
+    origin juga tidak akan pernah menyertakan cookie sesi.
+    """
+    if request.method in ("POST", "PUT", "PATCH", "DELETE"):
+        if request.headers.get("sec-fetch-site") == "cross-site":
+            return JSONResponse(
+                status_code=403,
+                content={"detail": "Permintaan lintas situs ditolak (CSRF)"},
+            )
+        if request.headers.get("content-length") not in (None, "0"):
+            ctype = (request.headers.get("content-type") or "").split(";")[0].strip().lower()
+            if ctype and ctype != "application/json":
+                return JSONResponse(
+                    status_code=415,
+                    content={"detail": "Content-Type harus application/json"},
+                )
+
+    response = await call_next(request)
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("X-Frame-Options", "DENY")
+    response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+    response.headers.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+    response.headers.setdefault("Permissions-Policy", "geolocation=(), microphone=()")
+    return response
+
+# CORS: frontend memanggil path relatif /api lewat origin yang sama, jadi CORS
+# sebetulnya tidak diperlukan. Bila CORS_ORIGINS masih "*", kredensial TIDAK
+# boleh diizinkan — wildcard + allow_credentials membuat origin mana pun bisa
+# memantulkan permintaan bercookie. Set CORS_ORIGINS ke daftar origin eksplisit
+# (dipisah koma) bila memang perlu memanggil API dari domain lain.
+_origins = [o.strip() for o in os.environ.get('CORS_ORIGINS', '*').split(',') if o.strip()]
+_wildcard = "*" in _origins
+
 app.add_middleware(
     CORSMiddleware,
-    allow_credentials=True,
-    allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),
+    allow_credentials=not _wildcard,
+    allow_origins=_origins,
     allow_methods=["*"],
     allow_headers=["*"],
 )

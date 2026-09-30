@@ -167,13 +167,21 @@ async def create_payment(input: PaymentCreate, actor: str = Depends(require_sess
 
 @router.patch("/{id}/confirm", response_model=Payment)
 async def confirm_payment(id: str, actor: str = Depends(require_session)):
+    # Hanya tagihan berstatus `menunggu` yang boleh dikonfirmasi — mencegah
+    # konfirmasi ganda dan menghidupkan kembali pembayaran yang sudah ditolak.
     doc = await db.payments.find_one_and_update(
-        {"id": id},
+        {"id": id, "status": "menunggu"},
         {"$set": {"status": "lunas", "confirmed_at": aware_utcnow()}},
         return_document=ReturnDocument.AFTER,
     )
     if not doc:
-        raise HTTPException(status_code=404, detail="Pembayaran tidak ditemukan")
+        ada = await db.payments.find_one({"id": id})
+        if not ada:
+            raise HTTPException(status_code=404, detail="Pembayaran tidak ditemukan")
+        raise HTTPException(
+            status_code=409,
+            detail=f"Pembayaran ini sudah berstatus {ada.get('status')} — tidak bisa dikonfirmasi lagi",
+        )
     await log_activity(
         actor, "konfirmasi", "pembayaran", id, _label(doc),
         f"{doc.get('periode', '')} — Rp {int(doc.get('jumlah', 0)):,}".replace(",", "."),
@@ -183,13 +191,20 @@ async def confirm_payment(id: str, actor: str = Depends(require_session)):
 
 @router.patch("/{id}/reject", response_model=Payment)
 async def reject_payment(id: str, actor: str = Depends(require_session)):
+    # Hanya tagihan `menunggu` yang boleh ditolak.
     doc = await db.payments.find_one_and_update(
-        {"id": id},
+        {"id": id, "status": "menunggu"},
         {"$set": {"status": "ditolak"}},
         return_document=ReturnDocument.AFTER,
     )
     if not doc:
-        raise HTTPException(status_code=404, detail="Pembayaran tidak ditemukan")
+        ada = await db.payments.find_one({"id": id})
+        if not ada:
+            raise HTTPException(status_code=404, detail="Pembayaran tidak ditemukan")
+        raise HTTPException(
+            status_code=409,
+            detail=f"Pembayaran ini sudah berstatus {ada.get('status')} — tidak bisa ditolak",
+        )
     await log_activity(actor, "tolak", "pembayaran", id, _label(doc), doc.get("periode", ""))
     return _to_payment(doc)
 

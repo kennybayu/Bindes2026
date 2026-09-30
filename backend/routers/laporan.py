@@ -25,6 +25,13 @@ BULAN = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli",
          "Agustus", "September", "Oktober", "November", "Desember"]
 
 
+def _aman_excel(nilai: str) -> str:
+    """Cegah formula injection: nilai yang diawali = + - @ diberi kutip tunggal
+    agar Excel/LibreOffice membacanya sebagai teks, bukan rumus."""
+    teks = "" if nilai is None else str(nilai)
+    return f"'{teks}" if teks[:1] in ("=", "+", "-", "@") else teks
+
+
 def _fmt_dt(value) -> str:
     if not value:
         return "-"
@@ -108,9 +115,9 @@ async def export_pembayaran_xlsx(
     row_num = 6
     for idx, p in enumerate(payments, start=1):
         ws.cell(row=row_num, column=1, value=idx)
-        ws.cell(row=row_num, column=2, value=p.nomor_id)
-        ws.cell(row=row_num, column=3, value=p.nama_lengkap)
-        ws.cell(row=row_num, column=4, value=p.periode)
+        ws.cell(row=row_num, column=2, value=_aman_excel(p.nomor_id))
+        ws.cell(row=row_num, column=3, value=_aman_excel(p.nama_lengkap))
+        ws.cell(row=row_num, column=4, value=_aman_excel(p.periode))
         ws.cell(row=row_num, column=5, value=p.jumlah)
         ws.cell(row=row_num, column=6, value=p.metode.capitalize())
         ws.cell(row=row_num, column=7, value=STATUS_LABEL.get(p.status, p.status))

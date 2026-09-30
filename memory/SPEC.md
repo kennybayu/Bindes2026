@@ -17,6 +17,17 @@ topbar putih dengan jam WITA, konten slate-50, aksen emas amber.
 - `payments` (Pembayaran): `id`, `tenant_id`, denormalisasi `nomor_id`+`nama_lengkap`, `periode` (label bebas), `jumlah`, `metode` (tunai|qris|transfer), `status` (**menunggu → lunas** via confirm; bisa `ditolak` via reject), `jatuh_tempo`, `catatan`, `confirmed_at`, `created_at`
 - Indexes di `backend/lib/db.py` INDEXES (id/nomor_id unik, tenant_created, status_created)
 
+## Keamanan (hasil security audit + perbaikannya)
+- **Tidak ada endpoint anonim**: route starter `/api/status` (GET/POST) sudah DIHAPUS beserta index `status_checks`. Hanya `GET /api/` yang publik, dan hanya mengembalikan `{"status":"ok"}` (tanpa data) untuk readiness probe.
+- **CSRF** (`server.py` middleware `csrf_dan_security_headers`): cookie diset `SameSite=Lax` tetapi ingress/CDN menulisnya ulang jadi `SameSite=None`, jadi SameSite TIDAK bisa diandalkan. Pertahanan yang dipakai: (a) tolak 403 bila `Sec-Fetch-Site: cross-site` (header diisi browser, tak bisa dipalsukan), (b) tolak 415 bila POST/PUT/PATCH/DELETE ber-body tapi `Content-Type` bukan `application/json` (menutup jalur form HTML lintas situs). **Jangan bandingkan Origin dengan header `Host`** — di balik ingress `Host` bukan domain publik, dan percobaan itu sempat memblokir seluruh permintaan sah.
+- **CORS**: `allow_credentials` otomatis `False` bila `CORS_ORIGINS` masih `*`, sehingga wildcard tidak bisa dipakai memantulkan permintaan bercookie. Frontend tidak terpengaruh karena memanggil path relatif (same-origin).
+- **Header pengerasan** pada semua respons: `X-Content-Type-Options`, `X-Frame-Options: DENY`, `Referrer-Policy`, `Strict-Transport-Security`, `Permissions-Policy`.
+- **Rate limit** (`lib/ratelimit.py`, koleksi `login_attempts` + TTL 1 jam): 5 kegagalan per 15 menit per (username+IP) → 429 dengan `Retry-After`. Berlaku untuk `/auth/login` dan `/auth/change-password`.
+- **Peringatan password bawaan**: `/auth/me` & `/auth/login` mengembalikan `password_bawaan`, DIHITUNG ULANG dengan membandingkan password aktif terhadap `ADMIN_PASSWORD` di .env (bukan flag tersimpan — supaya tetap benar bila password diganti lalu dikembalikan ke nilai bawaan). Frontend menampilkan `DefaultPasswordAlert` di Dashboard & Pengaturan.
+- **Integritas data**: `jumlah` pembayaran dan `tarif` penyewa wajib `> 0` dan `<= 1_000_000_000`; panjang teks dibatasi. `confirm`/`reject` hanya menerima pembayaran berstatus `menunggu` — selain itu 409 (mencegah konfirmasi ganda & menghidupkan pembayaran yang sudah ditolak).
+- **Injeksi**: parameter pencarian `q` di-`re.escape()` dan dibatasi 80 karakter (cegah ReDoS/pola tak terduga). Ekspor Excel melewatkan nilai teks lewat `_aman_excel()` yang memberi awalan kutip tunggal pada `= + - @` (cegah formula injection).
+- Sisa risiko yang disengaja: password bawaan masih nilai terdokumentasi — pengelola HARUS menggantinya lewat `/pengaturan`; UI sudah memperingatkan.
+
 ## Pusat konfigurasi (WAJIB dipakai, jangan hardcode ulang)
 Semua teks/angka yang mungkin diubah pengelola sudah dipusatkan — **tidak ada lagi nama desa, tarif, atau zona waktu yang ditulis langsung di komponen**:
 - `frontend/src/config.ts` → `BRANDING` (namaDesa, namaPasar, versi, jabatanPenandatangan, zonaWaktu, labelZonaWaktu), `TARIF_DEFAULT` (acuan tarif per kategori), `PESAN_WA` (template sapaan/identitas/penutup dengan penanda `{nama}`, `{blok}`, `{nomorId}`, `{namaPasar}`, `{namaDesa}`)

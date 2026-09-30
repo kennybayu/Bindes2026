@@ -372,3 +372,49 @@ Aturan saat menambah fitur baru:
 | `memory/SPEC.md` | Ringkasan teknis sistem (untuk developer) |
 | `memory/test_credentials.md` | Catatan kredensial login |
 | `README.md`, `TEMPLATE.md` | Dokumen teknis kerangka aplikasi |
+
+---
+
+## 9. KEAMANAN (hasil audit & apa yang harus Anda lakukan)
+
+### 9.1 WAJIB DILAKUKAN SEKARANG: ganti password
+Selama password masih nilai bawaan, aplikasi menampilkan **peringatan merah** di
+Dashboard dan halaman Pengaturan. Siapa pun yang membaca dokumen ini bisa masuk
+dan melihat seluruh data penyewa (termasuk nomor HP) serta data pembayaran.
+
+Langkah: buka web -> menu **Pengaturan** -> isi password lama & password baru
+(minimal 8 karakter) -> Simpan. Peringatan merah akan hilang sendiri.
+
+Gunakan password yang: minimal 12 karakter, gabungan huruf-angka, dan **tidak**
+dipakai di layanan lain. Setelah diganti, sesi di perangkat lain otomatis dicabut.
+
+### 9.2 Perlindungan yang sudah aktif
+
+| Perlindungan | Keterangan |
+|---|---|
+| Password disimpan ter-enkripsi | PBKDF2-SHA256 200.000 iterasi + salt per akun. Password asli tidak pernah disimpan |
+| Sesi aman | Cookie `HttpOnly` + `Secure`, berlaku 7 hari, dicabut di server saat logout |
+| Semua data terkunci | Seluruh alamat `/api/...` menolak (401) tanpa sesi login |
+| Anti tebak password | 5 kali gagal login dalam 15 menit -> terkunci 15 menit (429) |
+| Anti serangan lintas situs (CSRF) | Permintaan dari situs lain ditolak (403); body wajib JSON (415) |
+| Anti rumus jahat di Excel | Nama yang diawali `= + - @` ditulis sebagai teks, bukan rumus |
+| Batas nilai | Tarif & nominal pembayaran wajib lebih dari 0 |
+| Anti konfirmasi ganda | Pembayaran yang sudah lunas/ditolak tidak bisa dikonfirmasi lagi (409) |
+| Header pengerasan | HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy |
+| Catatan audit | Semua perubahan tercatat di Riwayat Aktivitas beserta pelaku & waktu |
+
+### 9.3 Kebiasaan aman untuk pengelola
+1. Ganti password secara berkala, jangan dibagikan lewat grup WhatsApp.
+2. Selalu tekan **Keluar** bila memakai komputer bersama/warnet.
+3. Lakukan `mongodump` (bagian 5.4) secara berkala dan simpan salinannya.
+4. Jangan menaruh screenshot berisi nomor HP penyewa di grup terbuka.
+5. Bila merasa ada akses tidak sah: ganti password (otomatis mencabut semua sesi
+   lain), lalu periksa menu **Riwayat Aktivitas**.
+
+### 9.4 Jika ingin membuka API dari domain lain
+Bawaan `CORS_ORIGINS="*"` sengaja **tidak** mengizinkan pengiriman cookie, demi
+keamanan. Bila perlu memanggil API dari domain lain, isi daftar domain secara
+eksplisit di `backend/.env` (dipisah koma), lalu restart backend:
+```
+CORS_ORIGINS="https://domain-anda.id,https://admin.domain-anda.id"
+```

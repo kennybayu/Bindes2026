@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { KeyRound, ShieldCheck } from "lucide-react";
 import { BRANDING } from "@/config";
+import DefaultPasswordAlert from "@/components/DefaultPasswordAlert";
 import { ApiError, apiGet, apiPost } from "@/lib/api";
 import type { MeOutput } from "@/lib/types";
 import { Button } from "@/components/ui/button";
@@ -78,6 +79,7 @@ export default function Pengaturan() {
       </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
+        <DefaultPasswordAlert />
         <Card data-testid="kartu-ganti-password">
           <CardHeader>
             <CardTitle>Ganti Password</CardTitle>

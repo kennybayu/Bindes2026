@@ -15,6 +15,8 @@ export interface Activity {
 // Mirror MeOutput di backend/routers/auth.py
 export interface MeOutput {
   username: string;
+  /** true selama password masih nilai bawaan .env (belum pernah diganti). */
+  password_bawaan: boolean;
 }
 
 export type KategoriSewa = "harian" | "bulanan" | "tahunan";

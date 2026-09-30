@@ -1,5 +1,6 @@
 """CRUD penyewa lapak."""
 
+import re
 from datetime import datetime
 from typing import Any, List
 
@@ -32,13 +33,15 @@ async def next_nomor_id() -> str:
 
 @router.get("", response_model=List[Tenant])
 async def list_tenants(
-    q: str | None = Query(None, description="cari nama / nomor ID / blok"),
+    q: str | None = Query(None, max_length=80, description="cari nama / nomor ID / blok"),
     kategori: str | None = Query(None),
     status: str | None = Query(None),
 ):
     query: dict[str, Any] = {}
     if q:
-        rx = {"$regex": q, "$options": "i"}
+        # Escape agar input pengguna diperlakukan sebagai teks biasa, bukan pola
+        # regex (mencegah ReDoS & pencarian tak terduga seperti ".*").
+        rx = {"$regex": re.escape(q), "$options": "i"}
         query["$or"] = [{"nama_lengkap": rx}, {"nomor_id": rx}, {"blok": rx}]
     if kategori:
         query["kategori"] = kategori
